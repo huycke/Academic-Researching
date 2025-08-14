@@ -11,6 +11,8 @@ lxml
 
 # For semantic chunking and building the vector database
 txtai
+# Required for the default embedding models
+sentence-transformers
 
 # For handling YAML configuration files (if any)
 # Although we use .py for config, this is a common dependency in agentic systems.

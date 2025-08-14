@@ -28,6 +28,9 @@ CHUNK_METHOD = "sentences"
 # --- Database Configuration ---
 # Path where the final txtai database will be stored
 DATABASE_PATH = "2_database/db/txtai_index"
+# The sentence-transformer model to use for generating embeddings.
+# 'all-MiniLM-L6-v2' is a good, lightweight default.
+SENTENCE_TRANSFORMER_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 # --- Application Behavior ---
