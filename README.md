@@ -1,4 +1,4 @@
-# Academic-Researching: A Private, Multi-Agent Research Assistant
+# Nexus Scholar: A Private, Multi-Agent Research Assistant
 
     An advanced, local-first RAG pipeline and multi-agent system designed for the sophisticated analysis and synthesis of academic documents.
 
