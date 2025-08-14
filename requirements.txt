@@ -1,25 +1,27 @@
-# --- Core Application Dependencies ---
-# Use 'pip freeze > requirements.txt' to pin exact versions for production
-# For now, we specify the libraries needed for the project to run.
+# This requirements file was manually generated based on the project's dependencies.
+# It is recommended to re-generate this file with `pip freeze > requirements.txt`
+# in a clean virtual environment after installing the packages to get exact, reproducible versions.
 
-# For making HTTP requests to GROBID and LLM APIs
-requests
+# --- Core Application Frameworks ---
+streamlit==1.36.0
+crewai==0.30.11
+langchain-openai==0.1.6
 
-# For parsing the XML output from GROBID
-beautifulsoup4
-lxml
+# --- Data Processing and Vector DB ---
+txtai==6.1.0
+sentence-transformers==2.7.0
 
-# For semantic chunking and building the vector database
-txtai
-# Required for the default embedding models
-sentence-transformers
+# --- Web Requests & Parsing ---
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==5.2.2
 
-# For handling YAML configuration files (if any)
-# Although we use .py for config, this is a common dependency in agentic systems.
-PyYAML
+# --- Testing ---
+pytest==8.2.0
+pytest-mock==3.12.0
+pyfakefs==5.4.1
 
-# For the Streamlit Web UI
-streamlit
-
-# For the multi-agent system
-crewai
+# --- Other Utilities ---
+python-dotenv==1.0.1
+PyYAML==6.0.1
+pandas==2.2.2 # Often useful for data handling, good to have.
