@@ -1,0 +1,23 @@
+# --- Core Application Dependencies ---
+# Use 'pip freeze > requirements.txt' to pin exact versions for production
+# For now, we specify the libraries needed for the project to run.
+
+# For making HTTP requests to GROBID and LLM APIs
+requests
+
+# For parsing the XML output from GROBID
+beautifulsoup4
+lxml
+
+# For semantic chunking and building the vector database
+txtai
+
+# For handling YAML configuration files (if any)
+# Although we use .py for config, this is a common dependency in agentic systems.
+PyYAML
+
+# For the Streamlit Web UI
+streamlit
+
+# For the multi-agent system
+crewai
