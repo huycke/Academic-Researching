@@ -1,6 +1,7 @@
 # 1_ingestion/ingest_pipeline.py
 
 import os
+import sys
 import requests
 import time
 import logging
@@ -11,11 +12,18 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from txtai.text import TextSplitter
 
+# --- Add project root to sys.path ---
+# This allows for absolute imports of modules from the project root
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 # --- Configuration Imports ---
 # Import settings from the newly created config files
 from config import main_config
-from . import config as ingest_config
-from . import prompts
+# The local config and prompts can be imported directly as they are in the same directory
+import config as ingest_config
+import prompts
 
 # --- Setup Logging ---
 # Configure a logger for this script

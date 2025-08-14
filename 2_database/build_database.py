@@ -1,14 +1,20 @@
 # 2_database/build_database.py
 
 import os
+import sys
 import json
 import logging
 from pathlib import Path
 from txtai import Embeddings
 
+# --- Add project root to sys.path ---
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 # --- Configuration Imports ---
 from config import main_config
-from . import config as db_config
+import config as db_config
 
 # --- Setup Logging ---
 logging.basicConfig(
