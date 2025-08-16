@@ -164,6 +164,41 @@ def test_ingestion_pipeline_grobid_failure(mock_post, mock_fs):
     assert len(processed_files) == 0
 
 
+def test_xml_to_markdown_conversion(mock_fs):
+    """
+    Tests the convert_xml_to_md function in isolation.
+    """
+    # --- Setup ---
+    # Read the sample XML content from the real file system before pyfakefs takes over
+    with open("tests/test_data/sample.xml", "r") as f:
+        xml_content = f.read()
+
+    # Create the necessary files and directories in the fake file system
+    xml_path = Path("/app/test.xml")
+    md_path = Path("/app/test.md")
+    pdf_path = Path("/app/dummy.pdf") # A dummy path for the function signature
+    mock_fs.create_file(xml_path, contents=xml_content)
+
+    # --- Run the function ---
+    import importlib
+    importlib.reload(ingest_pipeline)
+    success = ingest_pipeline.convert_xml_to_md(xml_path, md_path, pdf_path)
+
+    # --- Assertions ---
+    assert success is True
+    assert md_path.exists()
+
+    with open(md_path, 'r') as f:
+        markdown_content = f.read()
+
+    assert "# A Sample Paper for Testing" in markdown_content
+    assert "## Abstract" in markdown_content
+    assert "This is the abstract" in markdown_content
+    assert "### 1. Introduction" in markdown_content # Checks heading level
+    assert "| Column 1 | Column 2 |" in markdown_content # Checks table conversion
+    assert "|---|---|" in markdown_content
+
+
 @patch('ingestion.ingest_pipeline.requests.post')
 @patch('ingestion.ingest_pipeline.ChatOpenAI')
 def test_ingestion_pipeline_llm_failure(mock_chat_openai, mock_post, mock_fs):

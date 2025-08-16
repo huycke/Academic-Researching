@@ -1,11 +1,13 @@
-# This requirements file was manually generated based on the project's dependencies.
+# This requirements file was manually generated.
 # It is recommended to re-generate this file with `pip freeze > requirements.txt`
 # in a clean virtual environment after installing the packages to get exact, reproducible versions.
 
 # --- Core Application Frameworks ---
+# Version pins for crewai and langchain are removed to allow pip to resolve conflicts.
+# Install these, then run 'pip freeze' to get a working, pinned set.
 streamlit==1.36.0
-crewai==0.30.11
-langchain-openai==0.1.6
+crewai
+langchain-openai
 
 # --- Data Processing and Vector DB ---
 txtai==6.1.0
