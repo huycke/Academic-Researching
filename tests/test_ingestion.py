@@ -5,6 +5,7 @@ import json
 # --- Module to be tested ---
 # This import assumes the directory has been renamed from '1_ingestion' to 'ingestion'
 from ingestion import ingest_pipeline
+from tests.mocks.mock_llm import MockLLM
 
 # --- Mock Data ---
 MOCK_XML_CONTENT = """
@@ -88,26 +89,24 @@ VALIDATION_ENRICHMENT_PROMPT = "mock prompt: {markdown_text}"
 
 
 @patch('ingestion.ingest_pipeline.requests.post')
-def test_ingestion_pipeline_success(mock_post, mock_fs):
+@patch('ingestion.ingest_pipeline.ChatOpenAI')
+def test_ingestion_pipeline_success(mock_chat_openai, mock_post, mock_fs):
     """
     Tests the full ingestion pipeline on a successful run.
-    Mocks successful responses from both GROBID and the LLM.
+    Mocks a successful response from GROBID and uses a MockLLM.
     """
-    # --- Mock API Responses ---
+    # --- Mock API and Class Responses ---
+    # Mock the GROBID API call
     mock_grobid_response = MagicMock()
     mock_grobid_response.status_code = 200
     mock_grobid_response.text = MOCK_XML_CONTENT
+    mock_post.return_value = mock_grobid_response
 
-    mock_llm_response_obj = MagicMock()
-    mock_llm_response_obj.status_code = 200
-    # The LLM response content is a JSON string
-    mock_llm_response_obj.json.return_value = {
-        "choices": [{"message": {"content": json.dumps(MOCK_LLM_RESPONSE)}}]
-    }
-
-    # Configure the mock to return different values on consecutive calls
-    # First call is to GROBID, second is to the LLM
-    mock_post.side_effect = [mock_grobid_response, mock_llm_response_obj]
+    # Mock the LLM response by having ChatOpenAI return our MockLLM instance
+    mock_llm_instance = MockLLM()
+    # Our MockLLM needs to return a JSON string, just like the real one would
+    mock_llm_instance.invoke = MagicMock(return_value=json.dumps(MOCK_LLM_RESPONSE))
+    mock_chat_openai.return_value = mock_llm_instance
 
     # --- Run the pipeline ---
     # We need to reload the modules to use the fake file system
@@ -165,22 +164,58 @@ def test_ingestion_pipeline_grobid_failure(mock_post, mock_fs):
     assert len(processed_files) == 0
 
 
+def test_xml_to_markdown_conversion(mock_fs):
+    """
+    Tests the convert_xml_to_md function in isolation.
+    """
+    # --- Setup ---
+    # Read the sample XML content from the real file system before pyfakefs takes over
+    with open("tests/test_data/sample.xml", "r") as f:
+        xml_content = f.read()
+
+    # Create the necessary files and directories in the fake file system
+    xml_path = Path("/app/test.xml")
+    md_path = Path("/app/test.md")
+    pdf_path = Path("/app/dummy.pdf") # A dummy path for the function signature
+    mock_fs.create_file(xml_path, contents=xml_content)
+
+    # --- Run the function ---
+    import importlib
+    importlib.reload(ingest_pipeline)
+    success = ingest_pipeline.convert_xml_to_md(xml_path, md_path, pdf_path)
+
+    # --- Assertions ---
+    assert success is True
+    assert md_path.exists()
+
+    with open(md_path, 'r') as f:
+        markdown_content = f.read()
+
+    assert "# A Sample Paper for Testing" in markdown_content
+    assert "## Abstract" in markdown_content
+    assert "This is the abstract" in markdown_content
+    assert "### 1. Introduction" in markdown_content # Checks heading level
+    assert "| Column 1 | Column 2 |" in markdown_content # Checks table conversion
+    assert "|---|---|" in markdown_content
+
+
 @patch('ingestion.ingest_pipeline.requests.post')
-def test_ingestion_pipeline_llm_failure(mock_post, mock_fs):
+@patch('ingestion.ingest_pipeline.ChatOpenAI')
+def test_ingestion_pipeline_llm_failure(mock_chat_openai, mock_post, mock_fs):
     """
     Tests the pipeline's error handling when the LLM call fails.
     """
-    # --- Mock API Responses ---
+    # --- Mock API and Class Responses ---
+    # Mock the GROBID API call to succeed
     mock_grobid_response = MagicMock()
     mock_grobid_response.status_code = 200
     mock_grobid_response.text = MOCK_XML_CONTENT
+    mock_post.return_value = mock_grobid_response
 
-    # Simulate an LLM that returns an error
-    mock_llm_response_obj = MagicMock()
-    mock_llm_response_obj.status_code = 500
-    mock_llm_response_obj.json.return_value = {"error": "LLM is overloaded"}
-
-    mock_post.side_effect = [mock_grobid_response, mock_llm_response_obj]
+    # Mock the LLM to raise an exception upon invocation
+    mock_llm_instance = MockLLM()
+    mock_llm_instance.invoke = MagicMock(side_effect=Exception("LLM provider error"))
+    mock_chat_openai.return_value = mock_llm_instance
 
     # --- Run the pipeline ---
     import importlib

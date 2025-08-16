@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from bs4 import BeautifulSoup
 from txtai.text import TextSplitter
+from langchain_openai import ChatOpenAI
 
 # --- Add project root to sys.path ---
 # This allows for absolute imports of modules from the project root
@@ -246,59 +247,14 @@ def convert_xml_to_md(xml_path: Path, md_path: Path, pdf_path: Path) -> bool:
 
 # --- LLM Validation and Enrichment ---
 
-def call_llm(prompt: str) -> dict | None:
-    """
-    Calls the local LLM API with a given prompt.
-
-    Args:
-        prompt (str): The complete prompt to send to the LLM.
-
-    Returns:
-        dict | None: The parsed JSON response from the LLM, or None on failure.
-    """
-    headers = {
-        "Content-Type": "application/json",
-    }
-    if main_config.LLM_API_KEY and main_config.LLM_API_KEY != "not-required":
-        headers["Authorization"] = f"Bearer {main_config.LLM_API_KEY}"
-
-    data = {
-        "model": main_config.LLM_MODEL_NAME,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.1, # Low temperature for deterministic output
-        "max_tokens": main_config.LLM_MAX_TOKENS,
-        "response_format": {"type": "json_object"}
-    }
-
-    try:
-        response = requests.post(
-            main_config.LLM_API_ENDPOINT,
-            headers=headers,
-            data=json.dumps(data),
-            timeout=main_config.LLM_TIMEOUT
-        )
-        response.raise_for_status()
-
-        response_json = response.json()
-        content = response_json['choices'][0]['message']['content']
-
-        return json.loads(content)
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"LLM API request failed: {e}")
-        return None
-    except (json.JSONDecodeError, KeyError) as e:
-        logger.error(f"Failed to parse LLM response: {e}")
-        logger.error(f"Raw response content: {response.text}")
-        return None
-
-def validate_and_enrich_with_llm(md_path: Path, pdf_path: Path) -> dict | None:
+def validate_and_enrich_with_llm(md_path: Path, pdf_path: Path, llm_client) -> dict | None:
     """
     Uses an LLM to validate, clean, and enrich the Markdown content.
 
     Args:
         md_path (Path): Path to the cleaned Markdown file.
         pdf_path (Path): The original PDF path, for quarantining on failure.
+        llm_client: An LLM client object (e.g., ChatOpenAI or a mock) that has an .invoke() method.
 
     Returns:
         dict | None: A dictionary with cleaned_text, summary, and entities, or None on failure.
@@ -311,7 +267,28 @@ def validate_and_enrich_with_llm(md_path: Path, pdf_path: Path) -> dict | None:
 
         prompt = prompts.VALIDATION_ENRICHMENT_PROMPT.format(markdown_text=markdown_text)
 
-        llm_response = call_llm(prompt)
+        # Use the injected LLM client
+        response_content = llm_client.invoke(prompt)
+
+        # The response content should be a JSON string, so we parse it.
+        # This assumes the LLM (or mock) returns a string that can be parsed into the expected dict.
+        # In a real scenario, more complex parsing or error handling might be needed
+        # if the llm_client.invoke returns a structured object directly.
+        try:
+            # If the llm_client returns a string of JSON
+            if isinstance(response_content, str):
+                 llm_response = json.loads(response_content)
+            # If the llm_client returns a dict directly
+            elif isinstance(response_content, dict):
+                 llm_response = response_content
+            else:
+                # Handle unexpected response types
+                raise TypeError(f"Unsupported LLM response type: {type(response_content)}")
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Raw response content: {response_content}")
+            quarantine_file(pdf_path, "Failed to parse LLM JSON response.")
+            return None
 
         if not llm_response or not all(k in llm_response for k in ["cleaned_text", "summary", "entities"]):
             error_message = "LLM response was invalid or missing required keys."
@@ -383,6 +360,14 @@ def main():
         logger.error("Halting pipeline: GROBID server is not available.")
         return
 
+    # Instantiate the LLM client for the pipeline run
+    logger.info("Initializing LLM client...")
+    llm_client = ChatOpenAI(
+        base_url=main_config.LLM_API_ENDPOINT,
+        api_key=main_config.LLM_API_KEY,
+        model_name=main_config.LLM_MODEL_NAME
+    )
+
     pdf_files = list(ingest_config.PDF_SOURCE_DIR.glob("*.pdf"))
     if not pdf_files:
         logger.info("No new PDF files found to process.")
@@ -416,7 +401,7 @@ def main():
             continue
 
         # --- Step 3: LLM Validation and Enrichment ---
-        enriched_data = validate_and_enrich_with_llm(md_path, pdf_path)
+        enriched_data = validate_and_enrich_with_llm(md_path, pdf_path, llm_client)
         if not enriched_data:
             # The function already logs, quarantines, and cleans up.
             if xml_path.exists(): xml_path.unlink()

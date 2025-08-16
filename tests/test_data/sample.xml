@@ -1,0 +1,32 @@
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+    <teiHeader>
+        <fileDesc>
+            <titleStmt>
+                <title>A Sample Paper for Testing</title>
+            </titleStmt>
+        </fileDesc>
+    </teiHeader>
+    <text>
+        <body>
+            <div type="abstract">
+                <p>This is the abstract of the sample paper. It summarizes the key points.</p>
+            </div>
+            <div>
+                <head n="1">1. Introduction</head>
+                <p>This is the first paragraph of the introduction. It introduces the topic.</p>
+                <figure type="table">
+                    <table>
+                        <row role="header">
+                            <cell>Column 1</cell>
+                            <cell>Column 2</cell>
+                        </row>
+                        <row>
+                            <cell>A1</cell>
+                            <cell>B1</cell>
+                        </row>
+                    </table>
+                </figure>
+            </div>
+        </body>
+    </text>
+</TEI>
