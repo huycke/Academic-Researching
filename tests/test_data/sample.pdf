@@ -1,0 +1,4 @@
+This is a dummy PDF file for testing purposes.
+Its content is simple text.
+The purpose is to test file detection and handling in the ingestion pipeline
+without requiring a real PDF parser or GROBID.
